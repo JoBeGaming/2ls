@@ -1,2 +1,2 @@
 # 2ls
-Tools writen in Python
+Tools written in Python
