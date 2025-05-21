@@ -1,7 +1,3 @@
-# Not exposed to any external APIs
-
-# (c) Joshua Bettin, 2025
-
 from pathlib import Path
 
 from sentinel import _sentinel, _is_sentinel

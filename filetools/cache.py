@@ -1,7 +1,3 @@
-# Not exposed to any external APIs
-
-# (c) Joshua Bettin, 2025
-
 from collections.abc import Callable
 from typing import Any
 
