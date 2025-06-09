@@ -18,5 +18,5 @@ def wrap_text(text, target_width=40):
 
     return "\n# ".join(lines)
 
-
-print(wrap_text(input("Please input your text: "), target_width=46))
+while True:
+    print(wrap_text(input("Please input your text: "), target_width=46))
