@@ -15,8 +15,10 @@ class ConfigGetter:
     def __init__(self, new_path: str = "") -> None:
         if new_path:
             ConfigGetter.path = new_path
+
         with open(ConfigGetter.path, "r") as file:
             lines = file.readlines()
+
         for ln in lines:
             line = ln.split(":")
             key = line[0]
