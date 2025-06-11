@@ -1,3 +1,4 @@
+# Use PyYaml for a better yaml interface
 __all__: list[str] = [
     "ConfigGetter"
 ]
