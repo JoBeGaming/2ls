@@ -1,6 +1,8 @@
-import ast
 from pathlib import Path
 from collections import defaultdict, deque
+
+import ast
+import sys
 
 class ClassFunctionDependencyAnalyzer(ast.NodeVisitor):
     def __init__(self):
@@ -122,7 +124,6 @@ def analyze_python_file(file_path: str):
 
 
 if __name__ == "__main__":
-    import sys
     try:
         analyze_python_file(sys.argv[1])
     except IndexError:
