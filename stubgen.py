@@ -6,19 +6,18 @@ import sys
 from typing import Any
 
 INDENT: str = "    "
-all_imports = set()
+all_imports: set[ast.Import | ast.ImportFrom] = set()
 overloaded = []
 
 
-def extract_stub(tree):
+def extract_stub(tree: ast.Module) -> str:
     """Extracts type hints, imports, comments, docstrings and more into a .pyi file."""
     lines = extract_imports(tree)
-    lines.append(extract_body(tree.body, lines))
-    lines.pop()
+    extract_body(tree.body, lines)
     return "\n".join(lines)
 
 
-def extract_body(body, lines, indent=""):
+def extract_body(body: list[ast.stmt], lines: list[str], indent: str = "") -> None:
     for node in body:
         if isinstance(node, ast.FunctionDef):
             extract_function_stub(node, lines, indent)
@@ -87,7 +86,7 @@ def extract_node(node, lines, indent=""):
         lines.append(f"{indent}...  # Unhandled node: {type(node).__name__}")
 
 
-def extract_imports(tree, indent=""):
+def extract_imports(tree: ast.Module, indent: str = "") -> list[str]:
     """Extracts import statements from the original script."""
     imports = ["\n"]
     for node in tree.body:
@@ -98,14 +97,14 @@ def extract_imports(tree, indent=""):
             all_imports.add(node)
             up = ast.unparse(node)
             if len(up.split(",")) > 2:
-                up = up.split("import ")
-                up[0] += "import ("
-                upn = up[1].split(", ") # User is expected to use a space between commas
+                new_up = up.split("import ")
+                new_up[0] += "import ("
+                upn = new_up[1].split(", ") # User is expected to use a space between commas
                 for index in range(0, len(upn)):
                     upn[index] = f"{indent if not len(indent) < len(INDENT) else ''}" + INDENT + upn[index] + ",\n"
-                up[1] = "".join(upn)
-                up[-1] += ")\n"
-                for u in up:
+                new_up[1] = "".join(upn)
+                new_up[-1] += ")\n"
+                for u in new_up:
                     imports.append(f"{indent}{u}")
             else:
                 imports.append(f"{indent}{up}")
@@ -114,7 +113,7 @@ def extract_imports(tree, indent=""):
     return imports
 
 
-def extract_function_stub(node, lines, indent=""):
+def extract_function_stub(node, lines, indent: str = ""):
     """Extracts function signatures, docstrings, and comments."""
     arg_str = format_arguments(node.args, node.name)
     return_type = get_annotation(node.returns)
@@ -135,7 +134,7 @@ def extract_function_stub(node, lines, indent=""):
         lines.append(f"{indent}def {node.name}({arg_str}) -> {return_type}: ...")
 
 
-def extract_class_stub(node, lines, indent: str=""):
+def extract_class_stub(node: ast, lines, indent: str = ""):
     """Extracts class definitions, methods, docstrings, and comments."""
     base_classes = extract_base_classes(node)
     lines.append(f"{indent}class {node.name}{base_classes}:")
@@ -153,14 +152,14 @@ def extract_class_stub(node, lines, indent: str=""):
     lines.append("")
 
 
-def extract_del_statement(node, lines, indent: str=""):
+def extract_del_statement(node, lines, indent: str = ""):
     """Handles `del` statements by marking names as deleted."""
     for target in node.targets:
         if isinstance(target, ast.Name):
             lines.append(f"{indent}del {target.id}")
 
 
-def extract_type_alias(node, lines, indent: str=""):
+def extract_type_alias(node, lines, indent: str = ""):
     """Handles type alias definitions and annotated variables."""
     if isinstance(node, ast.AnnAssign):
         if isinstance(node.target, ast.Name):
@@ -175,15 +174,16 @@ def extract_type_alias(node, lines, indent: str=""):
             lines.append(f"{indent}{name}: {inferred_type} = ...")
 
 
-def extract_type_alias_statement(node, lines, indent=""):
+def extract_type_alias_statement(node, lines, indent: str = ""):
     """Handles `type NAME = OTHER_TYPE` statements correctly."""
     if isinstance(node, ast.TypeAlias):
         alias_name = node.name.id
         alias_type = get_annotation(node.value)
         lines.append(f"{indent}type {alias_name} = {alias_type}")
+        # Returns nothing?
 
 
-def extract_base_classes(node):
+def extract_base_classes(node) -> str:
     """Extracts base classes of a class definition."""
     if not node.bases:
         return ""
@@ -198,7 +198,7 @@ def extract_base_classes(node):
     return f"({', '.join(base_names)})"
 
 
-def is_overloaded_function(node):
+def is_overloaded_function(node) -> bool:
     """Checks if a function has multiple definitions (overloaded)."""
     return any(
         isinstance(decorator, ast.Name) and decorator.id == "overload"
@@ -206,7 +206,7 @@ def is_overloaded_function(node):
     )
 
 
-def detect_method_type(node):
+def detect_method_type(node) -> str:
     """Detects if a function is an instance, class, or static method."""
     for decorator in node.decorator_list:
         if isinstance(decorator, ast.Name):
@@ -218,7 +218,7 @@ def detect_method_type(node):
     return "instance"
 
 
-def format_arguments(args, function_name):
+def format_arguments(args, function_name) -> str:
     """Formats function arguments with type hints, special markers, and fixes `self` handling."""
     params = []
     pos_only = [format_arg(arg) for arg in args.posonlyargs]
@@ -238,7 +238,7 @@ def format_arguments(args, function_name):
     return ", ".join(params)
 
 
-def format_arg(arg):
+def format_arg(arg) -> str:
     """Formats a single function argument with its type annotation."""
     annotation = get_annotation(arg.annotation)
     if annotation is Any:
@@ -246,7 +246,7 @@ def format_arg(arg):
     return f"{arg.arg}: {annotation}"
 
 
-def get_annotation(node):
+def get_annotation(node) -> str:
     """Extracts annotation from AST node or defaults to Any."""
     if node is None:
         return "Any"
@@ -270,7 +270,7 @@ def get_annotation(node):
     return "Any"
 
 
-def generate_pyi(file_path):
+def generate_pyi(file_path: str):
     """Generates a .pyi file for the given Python file."""
     with open(file_path, "r", encoding="utf-8") as f:
         tree = ast.parse(f.read())
@@ -282,7 +282,7 @@ def generate_pyi(file_path):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        raise SyntaxError("Usage: python stubgen.py <python_file.py>")
+        raise SyntaxError("Usage: python pyi-gen.py <python_file.py>")
     else:
         generate_pyi(sys.argv[1])
 #TODO:
